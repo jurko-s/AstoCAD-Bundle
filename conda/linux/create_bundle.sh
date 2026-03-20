@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -x
 
 # Use FREECAD_VERSION environment variable if set, otherwise default
 FREECAD_VERSION="${FREECAD_VERSION:-1.0.2}"
@@ -14,8 +15,6 @@ if [ $? -ne 0 ]; then
     git clone https://github.com/FreeCAD/FreeCAD.git freecad-source && \
     cd freecad-source && git checkout $FREECAD_VERSION && cd ..
 fi
-
-set -x
 
 if [[ -z "$ARCH" ]]; then
   # Get the architecture of the system
