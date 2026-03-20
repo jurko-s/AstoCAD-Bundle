@@ -35,12 +35,26 @@ jobs:
             asset_pattern: AstoCAD_.*Linux-aarch64
 
     steps:
+    
       - if: matrix.os == 'windows-latest'
         name: msys2
         uses: msys2/setup-msys2@v2
 
       - uses: actions/checkout@v4
         name: Checkout
+
+      - uses: actions/checkout@v4
+        name: Checkout Bundle Scripts
+        with:
+          path: bundle-scripts
+
+      - name: Checkout FreeCAD Source (1.0.2)
+        uses: actions/checkout@v4
+        with:
+          repository: FreeCAD/FreeCAD
+          ref: 1.0.2  # The specific version tag
+          path: freecad-source
+          submodules: 'recursive'
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
