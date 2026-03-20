@@ -60,28 +60,18 @@ jobs:
           miniforge-variant: Miniforge3
           conda-remove-defaults: "true"
 
-      - if: matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04-arm'
-        name: update linux
+      - if: github.event_name != 'pull_request' && (matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04-arm')
+        name: import GPG key (if exists)
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y desktop-file-utils appstream zsync curl;
-          curl -LO https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$(uname -m).AppImage;
-          chmod a+x appimagetool-$(uname -m).AppImage;
-          
-      - name: Check if GPG key exists
-        id: check_gpg
-        if: github.event_name != 'pull_request' && (matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04-arm')
-        run: |
-          if [ -n "${{ secrets.GPG_KEY }}" ]; then
-           echo "has_gpg=true" >> $GITHUB_OUTPUT
+          if [ -n "$GPG_KEY" ]; then
+            echo "$GPG_KEY" | base64 --decode | gpg --batch --import
+            echo "GPG key imported successfully"
           else
-            echo "has_gpg=false" >> $GITHUB_OUTPUT
+            echo "No GPG_KEY secret found, skipping import"
           fi
-
-      - name: import GPG key
-        if: steps.check_gpg.outputs.has_gpg == 'true'
-        run: echo "$GPG_KEY" | base64 --decode | gpg --batch --import
-        env:
-          GPG_KEY: ${{ secrets.GPG_KEY }}
+          env:
+            GPG_KEY: ${{ secrets.GPG_KEY }}
+          
 
       - if: github.event_name != 'pull_request' && (matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04-arm')
         name: import GPG key
