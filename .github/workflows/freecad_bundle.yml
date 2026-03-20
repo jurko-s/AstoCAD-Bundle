@@ -1,12 +1,6 @@
 name: freecad_bundle
 
 on:
-  push:
-    branches:
-      - "*"
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       freecad_version:
