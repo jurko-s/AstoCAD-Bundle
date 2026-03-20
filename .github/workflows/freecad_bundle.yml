@@ -24,9 +24,12 @@ jobs:
       matrix:
         os: [macos-14, ubuntu-latest]  # Limit to what you need
         include:
+          - os: macos-14
+            bundle_dir: conda/osx
+            asset_pattern: AstoCAD_.*macOS-ARM
           - os: macos-14-xlarge
             bundle_dir: conda/osx
-            asset_pattern: AstoCAD_.*macOS-x86_64
+            asset_pattern: AstoCAD_.*macOS-Intel
           - os: ubuntu-latest
             bundle_dir: conda/linux
             asset_pattern: AstoCAD_.*Linux-x86_64
