@@ -22,9 +22,9 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-latest]  # Limit to what you need
+        os: [macos-latest, macos-14-xlarge, ubuntu-latest]  # Limit to what you need
         include:
-          - os: macos-14
+          - os: macos-latet
             bundle_dir: conda/osx
             asset_pattern: AstoCAD_.*macOS-ARM
           - os: macos-14-xlarge
@@ -116,10 +116,10 @@ jobs:
             DEPLOY_RELEASE: ${{ matrix.tag }}
 
       - name: Upload macOS Intel Bundle
-        if: matrix.os == 'macos-14' && github.event_name != 'pull_request'
+        if: matrix.os == 'macos-14-xlarge' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: FreeCAD-1.0.2-macOS-x86_64
+          name: AstroCAD-1.0.2-macOS-Intel
           path: ${{ matrix.bundle_dir }}/AstoCAD_*.dmg
           retention-days: 30
 
