@@ -1,4 +1,5 @@
 name: freecad_bundle
+
 on:
   push:
     branches:
@@ -7,6 +8,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      freecad_version:
+        description: 'FreeCAD version to build (tag, branch, or commit)'
+        required: true
+        default: '1.0.2'
+        type: string
 
 jobs:
   build-bundles:
@@ -15,8 +22,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        os: [macos-13, ubuntu-latest]
-        tag: ["weekly-builds"]
+        os: [macos-13, ubuntu-latest]  # Limit to what you need
         include:
           - os: macos-13
             bundle_dir: conda/osx
