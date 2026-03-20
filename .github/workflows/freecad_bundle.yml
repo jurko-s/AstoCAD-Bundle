@@ -103,55 +103,35 @@ jobs:
         env:
             DEPLOY_RELEASE: ${{ matrix.tag }}
 
-      - if: (github.event_name != 'pull_request')
-        name: Upload binaries to AstoCAD server
-        working-directory: ${{ matrix.bundle_dir }}
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-        shell: bash
-        run: |
-          # Install lftp for each OS
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update -qq && sudo apt-get install -y lftp;
-            FILE_PATTERN="AstoCAD_*.AppImage AstoCAD_*.txt";
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install lftp;
-            FILE_PATTERN="AstoCAD_*.dmg AstoCAD_*.txt";
-          elif [[ "$RUNNER_OS" == "Windows" ]]; then
-           # Find and upload files individually
-           find . -maxdepth 1 -name 'AstoCAD_*.7z' -o -name 'AstoCAD_*.txt' | while read -r file; do
-             filename=$(basename "$file")
-             echo "Uploading $filename"
-             powershell -Command "
-               try {
-                 \$ftpUri = 'ftp://${{ secrets.FTP_HOST }}/www/builds/$filename'
-                 \$ftpRequest = [System.Net.FtpWebRequest]::Create(\$ftpUri)
-                 \$ftpRequest.Credentials = New-Object System.Net.NetworkCredential('${{ secrets.FTP_USER }}', '${{ secrets.FTP_PASSWORD }}')
-                 \$ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::UploadFile
-                 \$ftpRequest.UseBinary = \$true
-                 \$ftpRequest.KeepAlive = \$false
- 
-                 \$fileStream = [System.IO.File]::OpenRead('$file')
-                 \$ftpStream = \$ftpRequest.GetRequestStream()
-                 \$fileStream.CopyTo(\$ftpStream)
-                 Write-Host 'Successfully uploaded $filename'
-               } finally {
-                 if (\$null -ne \$fileStream) { \$fileStream.Close() }
-                 if (\$null -ne \$ftpStream) { \$ftpStream.Close() }
-               }
-             " || exit 1
-           done
-           exit 0
-          fi
+      - name: Upload macOS Intel Bundle
+        if: matrix.os == 'macos-13' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeCAD-1.0.2-macOS-x86_64
+          path: ${{ matrix.bundle_dir }}/AstoCAD_*.dmg
+          retention-days: 30
 
-          if [[ "$RUNNER_OS" == "Linux" || "$RUNNER_OS" == "macOS" ]]; then
-            lftp -e "
-            open $FTP_HOST;
-            user $FTP_USER $FTP_PASSWORD;
-            cd /www/builds/;
-            mput $FILE_PATTERN;
-            bye
-            "
-          fi
+      - name: Upload macOS ARM Bundle
+        if: matrix.os == 'macos-latest' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeCAD-1.0.2-macOS-arm64
+          path: ${{ matrix.bundle_dir }}/AstoCAD_*.dmg
+          retention-days: 30
+
+      - name: Upload Linux AppImage (x86_64)
+        if: matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeCAD-1.0.2-Linux-x86_64-AppImage
+          path: ${{ matrix.bundle_dir }}/AstoCAD_*.AppImage
+          retention-days: 30
+
+      - name: Upload Linux AppImage (ARM64)
+        if: matrix.os == 'ubuntu-22.04-arm' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeCAD-1.0.2-Linux-aarch64-AppImage
+          path: ${{ matrix.bundle_dir }}/AstoCAD_*.AppImage
+          retention-days: 30
+
