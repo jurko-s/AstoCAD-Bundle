@@ -22,6 +22,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
+        os: [macos-14, ubuntu-latest]  # Limit to what you need
         include:
           - os: macos-14
             bundle_dir: conda/osx
@@ -31,22 +32,27 @@ jobs:
             asset_pattern: AstoCAD_.*Linux-x86_64
 
     steps:
-      # Checkout bundle scripts
+    
+      - if: matrix.os == 'windows-latest'
+        name: msys2
+        uses: msys2/setup-msys2@v2
+
+      - uses: actions/checkout@v4
+        name: Checkout
+
       - uses: actions/checkout@v4
         name: Checkout Bundle Scripts
         with:
           path: bundle-scripts
 
-      # Checkout FreeCAD source at specified version
-      - name: Checkout FreeCAD Source
+      - name: Checkout FreeCAD Source (1.0.2)
         uses: actions/checkout@v4
         with:
           repository: FreeCAD/FreeCAD
-          ref: ${{ github.event.inputs.freecad_version || '1.0.2' }}
+          ref: 1.0.2  # The specific version tag
           path: freecad-source
           submodules: 'recursive'
 
-      # Setup Conda
       - uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
@@ -54,44 +60,80 @@ jobs:
           miniforge-variant: Miniforge3
           conda-remove-defaults: "true"
 
-      # Linux-specific setup
-      - if: matrix.os == 'ubuntu-latest'
-        name: update linux
+      - if: github.event_name != 'pull_request' && (matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04-arm')
+        name: import GPG key (if exists)
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y desktop-file-utils appstream zsync curl;
-          curl -LO https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$(uname -m).AppImage;
-          chmod a+x appimagetool-$(uname -m).AppImage;
+          if [ -n "$GPG_KEY" ]; then
+            echo "$GPG_KEY" | base64 --decode | gpg --batch --import
+            echo "GPG key imported successfully"
+          else
+            echo "No GPG_KEY secret found, skipping import"
+          fi
+          env:
+            GPG_KEY: ${{ secrets.GPG_KEY }}
+          
 
-      # Install conda dependencies
-      - name: install conda dependencies
+      - if: github.event_name != 'pull_request' && (matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-22.04-arm')
+        name: import GPG key
+        run: echo "$GPG_KEY" | base64 --decode | gpg --batch --import
+        env:
+          GPG_KEY: ${{ secrets.GPG_KEY }}
+
+      - if: matrix.os != 'windows-latest'
+        name: install conda dependencies for unix
         run: |
           mamba install p7zip sed curl -y -c conda-forge;
 
-      # Create bundle
-      - name: create bundle
-        run: "bash ./create_bundle.sh"
-        working-directory: ${{ matrix.bundle_dir }}
-        env:
-            DEPLOY_RELEASE: ${{ github.event.inputs.freecad_version || '1.0.2' }}
-            FREECAD_VERSION: ${{ github.event.inputs.freecad_version || '1.0.2' }}
-            # Remove GPG-related env vars if you don't have secrets
-            # GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
-            # APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APPIMAGETOOL_SIGN_PASSPHRASE }}
+      - if: matrix.os == 'windows-latest'
+        name: install conda dependencies for windows
+        run: |
+          mamba install curl -y -c conda-forge;
 
-      # Upload macOS Intel Bundle
+      - if: matrix.os != 'windows-latest'
+        name: create unix bundle
+        run: "bash ./create_bundle.sh"
+        working-directory: ${{ matrix.bundle_dir}}
+        env:
+            DEPLOY_RELEASE: ${{ matrix.tag }}
+            GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+            APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APPIMAGETOOL_SIGN_PASSPHRASE }}
+
+      - if: matrix.os == 'windows-latest'
+        name: create windows bundle
+        shell: cmd
+        run: "call create_bundle.bat"
+        working-directory: ${{ matrix.bundle_dir}}
+        env:
+            DEPLOY_RELEASE: ${{ matrix.tag }}
+
       - name: Upload macOS Intel Bundle
         if: matrix.os == 'macos-14' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: FreeCAD-${{ github.event.inputs.freecad_version || '1.0.2' }}-macOS-x86_64
+          name: FreeCAD-1.0.2-macOS-x86_64
           path: ${{ matrix.bundle_dir }}/AstoCAD_*.dmg
           retention-days: 30
 
-      # Upload Linux AppImage (x86_64)
-      - name: Upload Linux AppImage
+      - name: Upload macOS ARM Bundle
+        if: matrix.os == 'macos-latest' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeCAD-1.0.2-macOS-arm64
+          path: ${{ matrix.bundle_dir }}/AstoCAD_*.dmg
+          retention-days: 30
+
+      - name: Upload Linux AppImage (x86_64)
         if: matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: FreeCAD-${{ github.event.inputs.freecad_version || '1.0.2' }}-Linux-x86_64-AppImage
+          name: FreeCAD-1.0.2-Linux-x86_64-AppImage
+          path: ${{ matrix.bundle_dir }}/AstoCAD_*.AppImage
+          retention-days: 30
+
+      - name: Upload Linux AppImage (ARM64)
+        if: matrix.os == 'ubuntu-22.04-arm' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeCAD-1.0.2-Linux-aarch64-AppImage
           path: ${{ matrix.bundle_dir }}/AstoCAD_*.AppImage
           retention-days: 30
