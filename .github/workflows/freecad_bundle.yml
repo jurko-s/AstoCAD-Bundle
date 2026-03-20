@@ -15,24 +15,15 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, macos-13, ubuntu-latest, ubuntu-22.04-arm]
+        os: [macos-13, ubuntu-latest]
         tag: ["weekly-builds"]
         include:
-          - os: windows-latest
-            bundle_dir: conda/win
-            asset_pattern: AstoCAD_.*Windows-x86_64
           - os: macos-13
             bundle_dir: conda/osx
             asset_pattern: AstoCAD_.*macOS-x86_64
-          - os: macos-latest
-            bundle_dir: conda/osx
-            asset_pattern: AstoCAD_.*macOS-arm64
           - os: ubuntu-latest
             bundle_dir: conda/linux
             asset_pattern: AstoCAD_.*Linux-x86_64
-          - os: ubuntu-22.04-arm
-            bundle_dir: conda/linux
-            asset_pattern: AstoCAD_.*Linux-aarch64
 
     steps:
     
