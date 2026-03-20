@@ -2,6 +2,8 @@
 
 set -x
 
+export MACOSX_DEPLOYMENT_TARGET=10.15
+export CMAKE_OSX_DEPLOYMENT_TARGET=10.15
 
 # Use FREECAD_VERSION environment variable if set, otherwise default
 FREECAD_VERSION="${FREECAD_VERSION:-1.0.2}"
